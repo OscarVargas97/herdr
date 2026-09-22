@@ -980,6 +980,11 @@ impl ClientShellState {
                     label: Some(trimmed.to_owned()),
                 },
             )),
+            ClientRenameTarget::ForwardPort => {
+                let input = trimmed.to_owned();
+                self.forward_port_from_input(&input);
+                None
+            }
         };
         if let Some(method) = method {
             self.push_endpoint_method(method, outcome);

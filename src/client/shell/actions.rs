@@ -510,6 +510,13 @@ impl ClientShellState {
         if let PendingEndpointKind::PaneLinkResolve { target } = pending.kind {
             return self.complete_link_hover(target, result);
         }
+        // Background polling: failures clear the list instead of raising notices.
+        if let PendingEndpointKind::PortList = pending.kind {
+            return (self.complete_port_list(result), Vec::new());
+        }
+        if let PendingEndpointKind::RepoList = pending.kind {
+            return (self.complete_repo_list(result), Vec::new());
+        }
         if result.is_ok() {
             let timeout_key = ClientEndpointNoticeKey {
                 boot_id: boot_id.to_owned(),
@@ -562,7 +569,11 @@ impl ClientShellState {
         }
         match pending.kind {
             PendingEndpointKind::Generic => {}
-            PendingEndpointKind::PaneLinkResolve { .. } => unreachable!("handled above"),
+            PendingEndpointKind::PaneLinkResolve { .. }
+            | PendingEndpointKind::PortList
+            | PendingEndpointKind::RepoList => {
+                unreachable!("handled above")
+            }
             PendingEndpointKind::ProductAnnouncementDismiss { version, id } => {
                 return match result {
                     Ok(_) => (false, Vec::new()),

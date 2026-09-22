@@ -480,6 +480,24 @@ impl Default for SpacesSidebarConfig {
 pub struct SidebarConfig {
     pub agents: AgentsSidebarConfig,
     pub spaces: SpacesSidebarConfig,
+    pub repos: ReposSidebarConfig,
+}
+
+/// Directories scanned for git repositories listed in the sidebar's repos section.
+#[derive(Debug, Clone, PartialEq, Eq, Deserialize, Serialize)]
+#[serde(default)]
+pub struct ReposSidebarConfig {
+    pub roots: Vec<String>,
+    pub max_depth: usize,
+}
+
+impl Default for ReposSidebarConfig {
+    fn default() -> Self {
+        Self {
+            roots: Vec::new(),
+            max_depth: 3,
+        }
+    }
 }
 
 #[cfg(test)]

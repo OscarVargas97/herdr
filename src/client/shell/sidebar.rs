@@ -430,9 +430,17 @@ pub(crate) fn render_sidebar(
         }
     }
 
-    super::render_agent_panel(
+    let agent_area = render_lower_sections(
         buffer,
         detail_area,
+        &snapshot.workspaces,
+        config,
+        state,
+        hits,
+    );
+    super::render_agent_panel(
+        buffer,
+        agent_area,
         snapshot,
         config,
         state.agent_scroll,
@@ -453,6 +461,73 @@ pub(crate) fn render_sidebar(
         "«",
         Style::default().fg(palette.overlay0),
     );
+}
+
+/// Draws the repos and ports sections under agents and returns the area left for agents.
+/// Both lists come from the active machine, so a remote machine shows its own repos and ports.
+pub(in crate::client::shell) fn render_lower_sections(
+    buffer: &mut Buffer,
+    detail_area: Rect,
+    workspaces: &[crate::protocol::ClientShellWorkspace],
+    config: &ClientShellConfig,
+    state: &mut ShellRenderState<'_>,
+    hits: &mut ShellHitMap,
+) -> Rect {
+    // Ports take only the rows they need at the bottom, whenever the machine can report them.
+    let port_rows =
+        super::super::ports::port_rows(state.ports, state.active_endpoint_id, state.port_forwards);
+    let port_height = super::super::ports::ports_section_height(
+        state.ports_supported,
+        port_rows.len(),
+        detail_area.height,
+    );
+    let port_area = Rect {
+        y: detail_area.bottom() - port_height,
+        height: port_height,
+        ..detail_area
+    };
+    let detail_area = Rect {
+        height: detail_area.height - port_height,
+        ..detail_area
+    };
+    // ponytail: agents and repos share the lower section 50/50; add a second
+    // draggable divider if the fixed split gets in the way.
+    // Repos come from the active machine, which lists nothing until its roots are configured.
+    let repo_height = if !state.repos.is_empty() {
+        detail_area.height / 2
+    } else {
+        0
+    };
+    let agent_area = Rect {
+        height: detail_area.height - repo_height,
+        ..detail_area
+    };
+    let repo_area = Rect::new(
+        detail_area.x,
+        agent_area.bottom(),
+        detail_area.width,
+        repo_height,
+    );
+    super::super::repos::render_repo_panel(
+        buffer,
+        repo_area,
+        workspaces,
+        config,
+        state.repos,
+        state.collapsed_repo_groups,
+        state.repo_scroll,
+        hits,
+    );
+    super::super::ports::render_port_panel(
+        buffer,
+        port_area,
+        workspaces,
+        config,
+        &port_rows,
+        state.active_endpoint_id,
+        hits,
+    );
+    agent_area
 }
 
 pub(crate) fn workspace_entries(

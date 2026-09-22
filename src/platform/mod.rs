@@ -45,6 +45,35 @@ pub struct ForegroundProcess {
     pub cmdline: Option<String>,
 }
 
+/// A TCP listener owned by a pane's process tree.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ListeningPort {
+    pub port: u16,
+    pub pid: u32,
+    pub process: String,
+    /// The pane child pid whose process tree owns the listener.
+    pub root_pid: u32,
+}
+
+/// Parses Linux `/proc/net/tcp` or `/proc/net/tcp6` into (port, socket inode) for listeners.
+#[cfg_attr(not(target_os = "linux"), allow(dead_code))]
+pub(crate) fn parse_proc_net_tcp_listeners(table: &str) -> Vec<(u16, u64)> {
+    const TCP_LISTEN: &str = "0A";
+    table
+        .lines()
+        .skip(1)
+        .filter_map(|line| {
+            let fields = line.split_whitespace().collect::<Vec<_>>();
+            if fields.get(3) != Some(&TCP_LISTEN) {
+                return None;
+            }
+            let port = u16::from_str_radix(fields.get(1)?.rsplit(':').next()?, 16).ok()?;
+            let inode = fields.get(9)?.parse().ok()?;
+            Some((port, inode))
+        })
+        .collect()
+}
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ForegroundJob {
     pub process_group_id: u32,
@@ -557,6 +586,23 @@ fn child_exit_classification_only_checkpoints_interruptions() {
     #[cfg(unix)]
     assert!(ChildExitReason::Handoff.requires_session_checkpoint());
     assert!(!ChildExitReason::WaitFailed.requires_session_checkpoint());
+}
+
+#[cfg(test)]
+#[test]
+fn proc_net_tcp_parser_keeps_only_listeners_with_hex_ports() {
+    // Captured from a Fedora 43 host; `ss -ltn` reported 22 and 36465 listening.
+    let tcp = "  sl  local_address rem_address   st tx_queue rx_queue tr tm->when retrnsmt   uid  timeout inode
+   0: 00000000:0016 00000000:0000 0A 00000000:00000000 00:00000000 00000000     0        0 23662 1 000000009c803fe7 100 0 0 10 0
+   2: 0100007F:8E71 00000000:0000 0A 00000000:00000000 00:00000000 00000000  1000        0 624069 1 000000000225f59d 100 0 0 10 0
+   3: 0100007F:8E71 0100007F:D2F0 01 00000000:00000000 00:00000000 00000000  1000        0 624070 1 000000000225f59d 100 0 0 10 0";
+    assert_eq!(
+        parse_proc_net_tcp_listeners(tcp),
+        vec![(22, 23662), (36465, 624069)]
+    );
+    let tcp6 = "  sl  local_address                         remote_address                        st tx_queue rx_queue tr tm->when retrnsmt   uid  timeout inode
+   1: 00000000000000000000000001000000:0277 00000000000000000000000000000000:0000 0A 00000000:00000000 00:00000000 00000000     0        0 28695 1 000000000effb14b 100 0 0 10 0";
+    assert_eq!(parse_proc_net_tcp_listeners(tcp6), vec![(631, 28695)]);
 }
 
 #[cfg(all(test, unix))]

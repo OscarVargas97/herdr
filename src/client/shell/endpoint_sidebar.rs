@@ -553,9 +553,17 @@ pub(super) fn render_expanded(
             }),
         );
     }
-    super::endpoint_agents::render_expanded(
+    let agent_area = super::sidebar::render_lower_sections(
         buffer,
         detail_area,
+        active_snapshot.map_or(&[], |snapshot| snapshot.workspaces.as_slice()),
+        config,
+        state,
+        hits,
+    );
+    super::endpoint_agents::render_expanded(
+        buffer,
+        agent_area,
         active_snapshot.and_then(|snapshot| snapshot.agent_view_label.as_deref()),
         state.endpoints,
         state.active_endpoint_id,

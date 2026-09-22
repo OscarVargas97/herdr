@@ -360,6 +360,14 @@ const DEFAULT_CONFIG: &str = r##"# herdr configuration
 # row_gap = 0
 # rows = [["state_icon", "workspace"], ["branch", "git_status"]]
 
+# Git repositories listed in a repos section under agents, shown once roots is set.
+# Each machine scans its own roots, so set this on every machine you connect to.
+# Click a repo to open or focus its space; repos are grouped by their parent
+# directory and a group header click collapses it. Reload config to rescan.
+# [ui.sidebar.repos]
+# roots = ["~/code"]
+# max_depth = 3
+
 # Background notification popup delivery
 [ui.toast]
 # off = disable pop-up notifications

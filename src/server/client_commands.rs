@@ -35,8 +35,11 @@ const CLIENT_SHELL_METHODS: &[&str] = &[
     "pane.split",
     "pane.swap",
     "pane.zoom",
+    "port.list",
+    "port.stop",
     "product_announcement.dismiss",
     "release_notes.dismiss",
+    "repo.list",
     "server.reload_config",
     "tab.close",
     "tab.create",
@@ -296,6 +299,18 @@ mod tests {
         assert_eq!(
             actual.remove("pane.link.resolve").as_deref(),
             Some("f5e4a3e01453ae7b188f127ce951c12c20e0bebcc17cc364eeb6d1a01fd5bf81")
+        );
+        assert_eq!(
+            actual.remove("port.list").as_deref(),
+            Some("06ff62813ef689aec317982d30d8c674cf0741692353b02cee243332b8e7d5f5")
+        );
+        assert_eq!(
+            actual.remove("port.stop").as_deref(),
+            Some("e0909f872915cd0b24d28303f6660cc059e79c0c88957851946ca4b4af93c8d2")
+        );
+        assert_eq!(
+            actual.remove("repo.list").as_deref(),
+            Some("57acf565e49671a4c7de45f4139cc360b280ca6eebbcb87466edf92d258660bb")
         );
 
         assert_eq!(

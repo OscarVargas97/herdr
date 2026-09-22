@@ -8,6 +8,8 @@ mod layouts;
 mod pane_graphics;
 mod panes;
 pub(crate) mod plugins;
+mod ports;
+mod repos;
 pub(super) mod responses;
 mod session;
 mod tabs;
@@ -1211,6 +1213,9 @@ impl App {
             Method::IntegrationList(_) => {
                 return self.handle_integration_list(request.id);
             }
+            Method::PortList(_) => return self.handle_port_list(request.id),
+            Method::PortStop(params) => return self.handle_port_stop(request.id, params),
+            Method::RepoList(_) => return self.handle_repo_list(request.id),
             Method::IntegrationInstall(params) => {
                 return self.handle_integration_install(request.id, params);
             }

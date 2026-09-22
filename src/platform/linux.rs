@@ -723,6 +723,51 @@ pub fn process_agent_hint(pid: u32) -> Option<crate::detect::Agent> {
     super::parse_agent_env_hint(&environ)
 }
 
+pub fn listening_ports(root_pids: &[u32]) -> Vec<super::ListeningPort> {
+    let port_by_inode = ["/proc/net/tcp", "/proc/net/tcp6"]
+        .iter()
+        .filter_map(|path| std::fs::read_to_string(path).ok())
+        .flat_map(|table| super::parse_proc_net_tcp_listeners(&table))
+        .map(|(port, inode)| (inode, port))
+        .collect::<std::collections::HashMap<_, _>>();
+    if port_by_inode.is_empty() {
+        return Vec::new();
+    }
+    let mut ports = Vec::new();
+    for &root_pid in root_pids {
+        for pid in session_processes(root_pid) {
+            let Ok(fds) = std::fs::read_dir(format!("/proc/{pid}/fd")) else {
+                continue;
+            };
+            for fd in fds.flatten() {
+                let Ok(link) = std::fs::read_link(fd.path()) else {
+                    continue;
+                };
+                let Some(port) = link
+                    .to_str()
+                    .and_then(|link| link.strip_prefix("socket:["))
+                    .and_then(|link| link.strip_suffix(']'))
+                    .and_then(|inode| inode.parse::<u64>().ok())
+                    .and_then(|inode| port_by_inode.get(&inode))
+                else {
+                    continue;
+                };
+                ports.push(super::ListeningPort {
+                    port: *port,
+                    pid,
+                    process: std::fs::read_to_string(format!("/proc/{pid}/comm"))
+                        .map(|name| name.trim().to_owned())
+                        .unwrap_or_default(),
+                    root_pid,
+                });
+            }
+        }
+    }
+    ports.sort_by_key(|port| (port.port, port.pid));
+    ports.dedup_by_key(|port| (port.port, port.pid));
+    ports
+}
+
 pub fn session_processes(child_pid: u32) -> Vec<u32> {
     let Some(session_id) = process_session_id(child_pid) else {
         return Vec::new();

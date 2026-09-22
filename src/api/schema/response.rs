@@ -305,6 +305,12 @@ pub enum ResponseResult {
         projection_revision: u64,
     },
     Ok {},
+    PortList {
+        ports: Vec<super::ports::PortInfo>,
+    },
+    RepoList {
+        repos: Vec<super::repos::RepoInfo>,
+    },
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, schemars::JsonSchema)]

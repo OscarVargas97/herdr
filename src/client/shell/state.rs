@@ -99,6 +99,10 @@ pub(super) struct ShellHitMap {
     pub(super) agent_scrollbar: Rect,
     pub(super) agent_scroll_metrics: Option<crate::pane::ScrollMetrics>,
     pub(super) agent_max_scroll: usize,
+    pub(super) repo_body: Rect,
+    pub(super) repo_rows: Vec<(Rect, super::repos::RepoTarget)>,
+    pub(super) repo_max_scroll: usize,
+    pub(super) port_rows: Vec<(Rect, super::ports::PortTarget)>,
     pub(super) agent_sort_toggle: Rect,
     pub(super) sidebar_divider: Rect,
     pub(super) sidebar_section_divider: Rect,
@@ -315,6 +319,8 @@ pub(super) enum ClientRenameTarget {
     Pane {
         pane_id: String,
     },
+    /// A remote port number to tunnel to this machine.
+    ForwardPort,
 }
 
 #[derive(Debug)]
@@ -615,6 +621,8 @@ impl ClientShellOverlay {
 
 #[derive(Debug)]
 pub(super) enum PendingEndpointKind {
+    RepoList,
+    PortList,
     Generic,
     ProductAnnouncementDismiss {
         version: String,
@@ -871,6 +879,16 @@ pub(crate) struct ClientShellState {
     pub(super) remote_collapsed_groups: HashMap<ClientEndpointId, HashSet<String>>,
     pub(super) workspace_scroll: usize,
     pub(super) agent_scroll: usize,
+    pub(super) repos: Vec<crate::api::schema::RepoInfo>,
+    pub(super) repos_endpoint: Option<ClientEndpointId>,
+    pub(super) repos_next_poll: Option<std::time::Instant>,
+    pub(super) collapsed_repo_groups: HashSet<String>,
+    pub(super) repo_scroll: usize,
+    pub(super) ports: Vec<crate::api::schema::PortInfo>,
+    pub(super) ports_next_poll: Option<std::time::Instant>,
+    pub(super) ports_endpoint: Option<ClientEndpointId>,
+    pub(super) ports_supported: bool,
+    pub(super) port_forwards: super::ports::PortForwards,
     pub(super) pending_agent_reveal: Option<(ClientEndpointId, String)>,
     pub(super) tab_scroll: usize,
     pub(super) mobile_switcher_scroll: usize,
@@ -1036,6 +1054,16 @@ impl ClientShellState {
             remote_collapsed_groups,
             workspace_scroll: 0,
             agent_scroll: 0,
+            repos: Vec::new(),
+            repos_endpoint: None,
+            repos_next_poll: None,
+            collapsed_repo_groups: HashSet::new(),
+            repo_scroll: 0,
+            ports: Vec::new(),
+            ports_next_poll: None,
+            ports_endpoint: None,
+            ports_supported: false,
+            port_forwards: Default::default(),
             pending_agent_reveal: None,
             tab_scroll: 0,
             mobile_switcher_scroll: 0,

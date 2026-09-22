@@ -7,6 +7,8 @@ pub mod events;
 pub mod integrations;
 pub mod panes;
 pub mod plugins;
+pub mod ports;
+pub mod repos;
 pub mod response;
 pub mod server;
 pub mod session;
@@ -21,6 +23,8 @@ pub use events::*;
 pub use integrations::*;
 pub use panes::*;
 pub use plugins::*;
+pub use ports::*;
+pub use repos::*;
 pub use response::*;
 pub use server::*;
 pub use session::*;
@@ -270,6 +274,12 @@ pub enum Method {
     PluginPaneFocus(PluginPaneFocusParams),
     #[serde(rename = "plugin.pane.close")]
     PluginPaneClose(PluginPaneCloseParams),
+    #[serde(rename = "port.list")]
+    PortList(EmptyParams),
+    #[serde(rename = "port.stop")]
+    PortStop(PortStopParams),
+    #[serde(rename = "repo.list")]
+    RepoList(EmptyParams),
 }
 
 #[cfg(test)]

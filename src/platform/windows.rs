@@ -2232,13 +2232,110 @@ fn session_processes_from_snapshot(child_pid: u32, snapshot: &ProcessSnapshot) -
     pids
 }
 
+pub fn listening_ports(root_pids: &[u32]) -> Vec<super::ListeningPort> {
+    use windows_sys::Win32::NetworkManagement::IpHelper::{
+        GetExtendedTcpTable, MIB_TCP6ROW_OWNER_PID, MIB_TCPROW_OWNER_PID,
+        TCP_TABLE_OWNER_PID_LISTENER,
+    };
+    use windows_sys::Win32::Networking::WinSock::{AF_INET, AF_INET6};
+
+    let snapshot = ProcessSnapshot::new(snapshot_processes());
+    let owner_by_pid = root_pids
+        .iter()
+        .flat_map(|&root| {
+            session_processes_from_snapshot(root, &snapshot)
+                .into_iter()
+                .map(move |pid| (pid, root))
+        })
+        .collect::<HashMap<_, _>>();
+    if owner_by_pid.is_empty() {
+        return Vec::new();
+    }
+
+    // Each table starts with a u32 row count followed by owner-pid rows.
+    fn table(family: u16) -> Vec<u8> {
+        let mut size = 0u32;
+        unsafe {
+            GetExtendedTcpTable(
+                null_mut(),
+                &mut size,
+                0,
+                family.into(),
+                TCP_TABLE_OWNER_PID_LISTENER,
+                0,
+            )
+        };
+        let mut buffer = vec![0u8; size as usize];
+        let status = unsafe {
+            GetExtendedTcpTable(
+                buffer.as_mut_ptr().cast(),
+                &mut size,
+                0,
+                family.into(),
+                TCP_TABLE_OWNER_PID_LISTENER,
+                0,
+            )
+        };
+        if status == 0 {
+            buffer
+        } else {
+            Vec::new()
+        }
+    }
+    fn rows<T: Copy>(buffer: &[u8], read: impl Fn(T) -> (u32, u32)) -> Vec<(u32, u32)> {
+        let Some(count) = buffer
+            .get(..4)
+            .map(|bytes| u32::from_ne_bytes(bytes.try_into().expect("four bytes")) as usize)
+        else {
+            return Vec::new();
+        };
+        let offset = size_of::<u32>().next_multiple_of(align_of::<T>());
+        (0..count)
+            .filter_map(|index| {
+                let start = offset + index * size_of::<T>();
+                let bytes = buffer.get(start..start + size_of::<T>())?;
+                Some(read(unsafe { bytes.as_ptr().cast::<T>().read_unaligned() }))
+            })
+            .collect()
+    }
+
+    let v4 = table(AF_INET);
+    let v6 = table(AF_INET6);
+    let mut ports = rows(&v4, |row: MIB_TCPROW_OWNER_PID| {
+        (row.dwLocalPort, row.dwOwningPid)
+    })
+    .into_iter()
+    .chain(rows(&v6, |row: MIB_TCP6ROW_OWNER_PID| {
+        (row.dwLocalPort, row.dwOwningPid)
+    }))
+    .filter_map(|(raw_port, pid)| {
+        let root_pid = *owner_by_pid.get(&pid)?;
+        Some(super::ListeningPort {
+            // The port is stored in network byte order in the low 16 bits.
+            port: u16::from_be(raw_port as u16),
+            pid,
+            process: snapshot
+                .entry(pid)
+                .map(|entry| entry.name.clone())
+                .unwrap_or_default(),
+            root_pid,
+        })
+    })
+    .collect::<Vec<_>>();
+    ports.sort_by_key(|port| (port.port, port.pid));
+    ports.dedup_by_key(|port| (port.port, port.pid));
+    ports
+}
+
 pub fn signal_processes(pids: &[u32], signal: Signal) {
+    use windows_sys::Win32::System::Threading::PROCESS_TERMINATE;
+
     if signal == Signal::Hangup {
         return;
     }
 
     for &pid in pids {
-        let Some(process) = ProcessHandle::open(pid, PROCESS_QUERY_LIMITED_INFORMATION) else {
+        let Some(process) = ProcessHandle::open(pid, PROCESS_TERMINATE) else {
             continue;
         };
         unsafe {

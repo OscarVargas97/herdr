@@ -1865,6 +1865,18 @@ impl ClientShellState {
                     outcome,
                 );
             }
+            MouseEventKind::ScrollUp if super::contains(self.hits.repo_body, point) => {
+                if self.repo_scroll > 0 {
+                    self.repo_scroll -= 1;
+                    outcome.repaint = true;
+                }
+            }
+            MouseEventKind::ScrollDown if super::contains(self.hits.repo_body, point) => {
+                if self.repo_scroll < self.hits.repo_max_scroll {
+                    self.repo_scroll += 1;
+                    outcome.repaint = true;
+                }
+            }
             MouseEventKind::ScrollUp if super::contains(self.hits.agent_body, point) => {
                 let next = self.agent_scroll.saturating_sub(1);
                 if next != self.agent_scroll {
@@ -2006,6 +2018,24 @@ impl ClientShellState {
                 if super::contains(self.hits.global_launcher, point) {
                     self.toggle_global_menu();
                     outcome.repaint = true;
+                    return;
+                }
+                if let Some((_, target)) = self
+                    .hits
+                    .port_rows
+                    .iter()
+                    .find(|(rect, _)| super::contains(*rect, point))
+                {
+                    self.activate_port_row(target.clone(), outcome);
+                    return;
+                }
+                if let Some((_, target)) = self
+                    .hits
+                    .repo_rows
+                    .iter()
+                    .find(|(rect, _)| super::contains(*rect, point))
+                {
+                    self.activate_repo_row(target.clone(), outcome);
                     return;
                 }
                 if super::contains(self.hits.new_workspace, point) {

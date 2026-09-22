@@ -1061,6 +1061,12 @@ pub fn process_cwd(pid: u32) -> Option<PathBuf> {
     Some(PathBuf::from(OsStr::from_bytes(&vip_path[..nul])))
 }
 
+// ponytail: port detection is Windows-only for now; macOS can use
+// proc_pidfdinfo(PROC_PIDFDSOCKETINFO) over each session pid when it is needed.
+pub fn listening_ports(_root_pids: &[u32]) -> Vec<super::ListeningPort> {
+    Vec::new()
+}
+
 pub fn session_processes(child_pid: u32) -> Vec<u32> {
     if child_pid == 0 {
         return Vec::new();

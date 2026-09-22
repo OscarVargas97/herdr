@@ -3898,6 +3898,26 @@
             }
           ]
         },
+        "PortStopParams": {
+          "properties": {
+            "pid": {
+              "format": "uint32",
+              "minimum": 0,
+              "type": "integer"
+            },
+            "port": {
+              "format": "uint16",
+              "maximum": 65535,
+              "minimum": 0,
+              "type": "integer"
+            }
+          },
+          "required": [
+            "port",
+            "pid"
+          ],
+          "type": "object"
+        },
         "ProductAnnouncementDismissParams": {
           "properties": {
             "id": {
@@ -6437,6 +6457,54 @@
             },
             "params": {
               "$ref": "#/schemas/request/$defs/PluginPaneCloseParams"
+            }
+          },
+          "required": [
+            "method",
+            "params"
+          ],
+          "type": "object"
+        },
+        {
+          "properties": {
+            "method": {
+              "const": "port.list",
+              "type": "string"
+            },
+            "params": {
+              "$ref": "#/schemas/request/$defs/EmptyParams"
+            }
+          },
+          "required": [
+            "method",
+            "params"
+          ],
+          "type": "object"
+        },
+        {
+          "properties": {
+            "method": {
+              "const": "port.stop",
+              "type": "string"
+            },
+            "params": {
+              "$ref": "#/schemas/request/$defs/PortStopParams"
+            }
+          },
+          "required": [
+            "method",
+            "params"
+          ],
+          "type": "object"
+        },
+        {
+          "properties": {
+            "method": {
+              "const": "repo.list",
+              "type": "string"
+            },
+            "params": {
+              "$ref": "#/schemas/request/$defs/EmptyParams"
             }
           },
           "required": [
@@ -9281,6 +9349,39 @@
             }
           ]
         },
+        "PortInfo": {
+          "description": "A TCP port listened on by a process running inside a pane.",
+          "properties": {
+            "pane_id": {
+              "type": "string"
+            },
+            "pid": {
+              "format": "uint32",
+              "minimum": 0,
+              "type": "integer"
+            },
+            "port": {
+              "format": "uint16",
+              "maximum": 65535,
+              "minimum": 0,
+              "type": "integer"
+            },
+            "process": {
+              "type": "string"
+            },
+            "workspace_id": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "port",
+            "pid",
+            "process",
+            "pane_id",
+            "workspace_id"
+          ],
+          "type": "object"
+        },
         "ReadFormat": {
           "enum": [
             "text",
@@ -9296,6 +9397,36 @@
             "detection"
           ],
           "type": "string"
+        },
+        "RepoInfo": {
+          "description": "A git repository found under the server's configured repo roots.",
+          "properties": {
+            "group": {
+              "description": "Parent directory relative to its scan root; repos sharing it form one group.",
+              "type": "string"
+            },
+            "group_label": {
+              "description": "Folder name of the group, used as the label of a space opened on the whole group.",
+              "type": "string"
+            },
+            "group_path": {
+              "type": "string"
+            },
+            "name": {
+              "type": "string"
+            },
+            "path": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "name",
+            "path",
+            "group",
+            "group_label",
+            "group_path"
+          ],
+          "type": "object"
         },
         "ResponseResult": {
           "oneOf": [
@@ -10647,6 +10778,44 @@
               },
               "required": [
                 "type"
+              ],
+              "type": "object"
+            },
+            {
+              "properties": {
+                "ports": {
+                  "items": {
+                    "$ref": "#/schemas/success_response/$defs/PortInfo"
+                  },
+                  "type": "array"
+                },
+                "type": {
+                  "const": "port_list",
+                  "type": "string"
+                }
+              },
+              "required": [
+                "type",
+                "ports"
+              ],
+              "type": "object"
+            },
+            {
+              "properties": {
+                "repos": {
+                  "items": {
+                    "$ref": "#/schemas/success_response/$defs/RepoInfo"
+                  },
+                  "type": "array"
+                },
+                "type": {
+                  "const": "repo_list",
+                  "type": "string"
+                }
+              },
+              "required": [
+                "type",
+                "repos"
               ],
               "type": "object"
             }

@@ -218,6 +218,11 @@ pub fn session_processes(_child_pid: u32) -> Vec<u32> {
 }
 
 /// Unsupported platform stub.
+pub fn listening_ports(_root_pids: &[u32]) -> Vec<super::ListeningPort> {
+    Vec::new()
+}
+
+/// Unsupported platform stub.
 pub fn signal_processes(_pids: &[u32], _signal: Signal) {}
 
 /// Unsupported platform stub.

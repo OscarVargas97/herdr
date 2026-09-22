@@ -105,6 +105,7 @@ impl ClientShellState {
                 self.set_local_config_diagnostic(self.config.local_config_diagnostic(&diagnostics));
             }
         }
+        self.repos_next_poll = None;
         self.reconcile_input_source();
     }
 }
