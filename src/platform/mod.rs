@@ -605,6 +605,25 @@ fn proc_net_tcp_parser_keeps_only_listeners_with_hex_ports() {
     assert_eq!(parse_proc_net_tcp_listeners(tcp6), vec![(631, 28695)]);
 }
 
+#[cfg(all(test, any(windows, target_os = "linux")))]
+#[test]
+fn listening_ports_reports_a_listener_owned_by_the_root_process() {
+    let listener = std::net::TcpListener::bind(("127.0.0.1", 0)).unwrap();
+    let port = listener.local_addr().unwrap().port();
+    let pid = std::process::id();
+    let found = listening_ports(&[pid]);
+    assert!(
+        found.iter().any(|listening| listening.port == port
+            && listening.pid == pid
+            && listening.root_pid == pid),
+        "port {port} of pid {pid} missing from {found:?}"
+    );
+    drop(listener);
+    assert!(!listening_ports(&[pid])
+        .iter()
+        .any(|listening| listening.port == port));
+}
+
 #[cfg(all(test, unix))]
 mod tests {
     use super::*;
