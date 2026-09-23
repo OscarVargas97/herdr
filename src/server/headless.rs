@@ -878,11 +878,17 @@ impl HeadlessServer {
         if outer_terminal_focus == Some(true) {
             self.app.state.mark_active_tab_seen();
         }
-        self.app.set_host_terminal_appearance_state(
-            host_terminal_appearance,
-            host_terminal_appearance_explicit,
-        );
-        self.app.set_host_terminal_theme(host_terminal_theme);
+        // Clients that never report a host theme (Windows skips the query) keep the
+        // current one; otherwise the theme flips on every foreground swap.
+        if host_terminal_appearance.is_some() {
+            self.app.set_host_terminal_appearance_state(
+                host_terminal_appearance,
+                host_terminal_appearance_explicit,
+            );
+        }
+        if host_terminal_theme != crate::terminal_theme::TerminalTheme::default() {
+            self.app.set_host_terminal_theme(host_terminal_theme);
+        }
     }
 
     fn sync_visible_server_config_diagnostic(&mut self, uses_local_keybindings: bool) {

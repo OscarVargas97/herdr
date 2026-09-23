@@ -3726,6 +3726,28 @@ fn client_shell_host_theme_follows_foreground_client() {
         Some(crate::terminal_theme::HostAppearance::Light)
     );
     assert!(!server.app.state.host_terminal_appearance_explicit);
+
+    // A client that never reported a theme (Windows) keeps the current one.
+    server.clients.insert(
+        3,
+        ClientConnection::new(
+            (80, 24),
+            crate::kitty_graphics::HostCellSize::default(),
+            3,
+            RenderEncoding::SemanticFrame,
+            None,
+        ),
+    );
+    server.foreground_client_id = Some(3);
+    server.sync_foreground_client_state();
+    assert_eq!(
+        server.app.state.host_terminal_theme.background,
+        Some(light.into())
+    );
+    assert_eq!(
+        server.app.state.host_terminal_appearance,
+        Some(crate::terminal_theme::HostAppearance::Light)
+    );
 }
 
 #[test]
