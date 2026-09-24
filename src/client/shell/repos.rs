@@ -15,6 +15,19 @@ pub(super) enum RepoTarget {
     Repo(usize),
 }
 
+/// Text shown for a group header. `group` is the full path relative to the
+/// root (e.g. "Multiplex/KMS" for repos two levels deep), which reads like a
+/// breadcrumb instead of a folder name; every header should show just the
+/// immediate parent folder's own name, so this looks up `group_label` from
+/// any repo in that group instead.
+fn group_display_label<'a>(repos: &'a [RepoInfo], group: &'a str) -> &'a str {
+    repos
+        .iter()
+        .find(|repo| repo.group == group)
+        .map(|repo| repo.group_label.as_str())
+        .unwrap_or(group)
+}
+
 /// Flattened rows: one header per group followed by its repos unless collapsed.
 pub(super) fn rows(repos: &[RepoInfo], collapsed: &HashSet<String>) -> Vec<RepoTarget> {
     let mut rows = Vec::new();
@@ -93,7 +106,8 @@ pub(super) fn render_repo_panel(
                 } else {
                     "▾"
                 };
-                format!(" {marker} {group}")
+                let label = group_display_label(repos, group);
+                format!(" {marker} {label}")
             }
             RepoTarget::Repo(index) => format!("   {}", repos[*index].name),
         };
@@ -275,5 +289,21 @@ mod tests {
             space_for(&repos, &RepoTarget::Repo(2)),
             Some(("api".into(), "/home/me/work/api".into()))
         );
+    }
+
+    #[test]
+    fn group_header_label_uses_the_immediate_parent_not_the_full_relative_path() {
+        // A repo two levels below the scan root (e.g. ~/Repos/Multiplex/KMS/app)
+        // has `group` set to the full relative path, but `group_label` set to
+        // just the immediate parent folder's own name.
+        let nested = RepoInfo {
+            name: "app".into(),
+            path: "/home/me/Multiplex/KMS/app".into(),
+            group: "Multiplex/KMS".into(),
+            group_label: "KMS".into(),
+            group_path: "/home/me/Multiplex/KMS".into(),
+        };
+        let repos = vec![nested];
+        assert_eq!(group_display_label(&repos, "Multiplex/KMS"), "KMS");
     }
 }
